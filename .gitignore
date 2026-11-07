@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+target/
+.anchor/
+.DS_Store
+*.log
+*.keypair.json
+wallet.json
