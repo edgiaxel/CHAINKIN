@@ -12,9 +12,9 @@ import { createInitializeCreatureTx, fetchCreatureAccount } from "@/lib/solana/t
 import { findCreaturePda } from "@/lib/solana/pda";
 import { getExplorerUrl } from "@/lib/solana/connection";
 import { CreatureAvatar } from "./CreatureAvatar";
-import { Sparkles, Loader2, AlertCircle, ExternalLink, ShieldCheck } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle, ExternalLink, ShieldCheck, Check } from "lucide-react";
 
-interface HatchModalProps {
+export interface HatchModalProps {
   onHatched: (creature: CreatureState) => void;
 }
 
@@ -111,21 +111,21 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
 
   return (
     <div className="w-full max-w-2xl mx-auto rounded-3xl bg-slate-900/90 border border-cyan-800/50 p-6 sm:p-8 shadow-2xl backdrop-blur-xl flex flex-col gap-6">
-      <div className="text-center flex flex-col gap-1.5">
-        <div className="inline-flex items-center justify-center gap-2 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
-          <Sparkles className="w-4 h-4" />
+      <div className="text-center flex flex-col items-center gap-1.5">
+        <div className="inline-flex items-center justify-center gap-2 text-cyan-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/60">
+          <Sparkles className="w-3.5 h-3.5" />
           First-Time Awakening
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
           Hatch Your Chainkin
         </h2>
-        <p className="text-sm text-slate-400 max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
           One creature per wallet. Permanently bonded and verified on Solana Devnet.
         </p>
       </div>
 
       {/* Archetype Selector */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {(Object.values(SPECIES_CATALOG) as typeof activeMetadata[]).map((meta) => {
           const isSelected = selectedSpecies === meta.id;
           return (
@@ -133,16 +133,30 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
               key={meta.id}
               type="button"
               onClick={() => setSelectedSpecies(meta.id)}
-              className={`p-3 rounded-2xl flex flex-col items-center gap-2 border transition-all text-center ${
+              className={`p-3.5 rounded-2xl flex flex-col items-center gap-2 border transition-all text-center relative ${
                 isSelected
-                  ? "bg-slate-800/90 border-cyan-400 shadow-lg shadow-cyan-950"
-                  : "bg-slate-950/60 border-slate-800 hover:border-slate-700 opacity-70 hover:opacity-100"
+                  ? "bg-slate-800/95 border-cyan-400 shadow-xl shadow-cyan-950 ring-2 ring-cyan-500/40"
+                  : "bg-slate-950/60 border-slate-800 hover:border-slate-700 opacity-75 hover:opacity-100"
               }`}
             >
+              {isSelected && (
+                <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </div>
+              )}
+
               <CreatureAvatar species={meta.id} className="w-16 h-16 sm:w-20 sm:h-20" />
               <div className="flex flex-col items-center">
                 <span className="text-sm font-bold text-slate-100">{meta.name}</span>
-                <span className="text-[10px] text-slate-400 hidden sm:inline">{meta.tagline}</span>
+                <span className="text-[10px] text-slate-400">{meta.tagline}</span>
+              </div>
+
+              {/* Base Traits Mini-Pills */}
+              <div className="grid grid-cols-2 gap-1 w-full pt-1.5 border-t border-slate-800/70 text-[9px] font-mono text-slate-400">
+                <span className="text-sky-300">Cur: {meta.baseTraits[0]}</span>
+                <span className="text-amber-300">Cou: {meta.baseTraits[1]}</span>
+                <span className="text-rose-300">Emp: {meta.baseTraits[2]}</span>
+                <span className="text-emerald-300">Ing: {meta.baseTraits[3]}</span>
               </div>
             </button>
           );
@@ -150,7 +164,7 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
       </div>
 
       {/* Active Archetype Description */}
-      <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-300 flex flex-col gap-1">
+      <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/90 text-xs text-slate-300 flex flex-col gap-1">
         <span className="font-semibold text-cyan-300">{activeMetadata.name}:</span>
         <p className="leading-relaxed text-slate-400">{activeMetadata.description}</p>
       </div>

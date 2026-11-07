@@ -23,6 +23,32 @@ body {
   }
 }
 
+@keyframes celebrationGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.45));
+  }
+  50% {
+    filter: drop-shadow(0 0 35px rgba(236, 72, 153, 0.75));
+  }
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 .creature-glow {
   animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.creature-celebrate {
+  animation: celebrationGlow 3s ease-in-out infinite;
+}
+
+.float-animation {
+  animation: floatGentle 5s ease-in-out infinite;
 }

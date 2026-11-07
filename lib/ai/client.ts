@@ -14,6 +14,11 @@ export async function fetchCreatureDialogue(ctx: DialogueContext): Promise<Dialo
       body: JSON.stringify(ctx),
     });
 
+    if (res.status === 429) {
+      console.warn("Dialogue API rate limit reached (HTTP 429). Using deterministic fallback.");
+      return getFallbackDialogue(ctx);
+    }
+
     if (!res.ok) {
       console.warn("Dialogue API returned non-OK status:", res.status);
       return getFallbackDialogue(ctx);
@@ -36,6 +41,11 @@ export async function fetchEvolutionNarrative(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
     });
+
+    if (res.status === 429) {
+      console.warn("Evolution narrative API rate limit reached (HTTP 429). Using fallback.");
+      return getFallbackEvolutionNarrative(req);
+    }
 
     if (!res.ok) {
       console.warn("Evolution narrative API returned non-OK status:", res.status);

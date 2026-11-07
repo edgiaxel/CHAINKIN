@@ -2,14 +2,29 @@ import { DialogueContext, DialogueResponse, EvolutionNarrativeRequest, Evolution
 import { SPECIES_IDS } from "../creature/types";
 
 export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
-  const { species, name, level, recentRitual, evolutionStage, evolutionName } = ctx;
+  const { species, name, level, recentRitual, evolutionStage, evolutionName, traits } = ctx;
+
+  let traitInsight = "";
+  if (traits && traits.length === 4) {
+    const [curiosity, courage, empathy, ingenuity] = traits;
+    const maxVal = Math.max(curiosity, courage, empathy, ingenuity);
+    if (curiosity === maxVal) {
+      traitInsight = ` Vibrant curiosity shimmers in ${name}'s eyes.`;
+    } else if (courage === maxVal) {
+      traitInsight = ` A courageous determination bolsters ${name}'s stance.`;
+    } else if (empathy === maxVal) {
+      traitInsight = ` An aura of deep empathy resonates around ${name}.`;
+    } else {
+      traitInsight = ` Subtle mechanical ingenuity sparks within ${name}.`;
+    }
+  }
 
   if (evolutionStage > 0 && evolutionName) {
     return {
       mood: "Transcendent",
       speech: `*Resonates deeply* The cluster pulses in harmony with our evolved form as ${evolutionName}.`,
       thought: `Reflecting upon our journey across Devnet slots.`,
-      narrativeInsight: `${name} has transcended ordinary limits, radiating newfound resonance.`,
+      narrativeInsight: `${name} has transcended ordinary limits, radiating newfound resonance.${traitInsight}`,
       isFallback: true,
     };
   }
@@ -21,7 +36,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
           mood: "Serene & Attuned",
           speech: `*Luminous ripples expand* Our connection clarifies the whispers between distant validator nodes.`,
           thought: `Feeling a gentle warmth bridging the wallet and spirit.`,
-          narrativeInsight: `${name}'s inner luminescence glows steadily after your shared meditation.`,
+          narrativeInsight: `${name}'s inner luminescence glows steadily after your shared meditation.${traitInsight}`,
           isFallback: true,
         };
       case SPECIES_IDS.BYTEBEAST:
@@ -29,7 +44,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
           mood: "Calibrated & Warm",
           speech: `*Gears hum in rhythmic cadence* Synchronization at 99.8%! Core temperature stabilizing!`,
           thought: `Registering positive feedback loop from operator.`,
-          narrativeInsight: `${name}'s copper joints click happily, eager for more cycles together.`,
+          narrativeInsight: `${name}'s copper joints click happily, eager for more cycles together.${traitInsight}`,
           isFallback: true,
         };
       case SPECIES_IDS.MOSSLING:
@@ -37,7 +52,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
           mood: "Rooted & Peaceful",
           speech: `*Leaves rustle softly* The quiet pulse of the chain flows gently through our roots.`,
           thought: `Drawing steady strength from this enduring bond.`,
-          narrativeInsight: `${name} unfurls fresh verdant sprouts in response to your presence.`,
+          narrativeInsight: `${name} unfurls fresh verdant sprouts in response to your presence.${traitInsight}`,
           isFallback: true,
         };
     }
@@ -50,7 +65,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
           mood: "Inquisitive",
           speech: `*Dances along transaction hashes* I charted three newly gossiped blocks in the mempool!`,
           thought: `Eager to discover what lies in the next slot.`,
-          narrativeInsight: `${name} returned from scouting with traces of radiant cryptographic stardust.`,
+          narrativeInsight: `${name} returned from scouting with traces of radiant cryptographic stardust.${traitInsight}`,
           isFallback: true,
         };
       case SPECIES_IDS.BYTEBEAST:
@@ -58,7 +73,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
           mood: "Overclocked",
           speech: `*Sparks flicker across antenna* Mission successful! Reclaimed 42 discarded bytecode fragments!`,
           thought: `Plotting optimization vector for the next expedition.`,
-          narrativeInsight: `${name} displays newly tuned telemetry dials gleaming with data.`,
+          narrativeInsight: `${name} displays newly tuned telemetry dials gleaming with data.${traitInsight}`,
           isFallback: true,
         };
       case SPECIES_IDS.MOSSLING:
@@ -66,7 +81,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
           mood: "Vibrant",
           speech: `*Unveils a glowing lichen seed* Ancient validator canopies shelter deep wisdom in their bark.`,
           thought: `The ledger soil here is fertile and unyielding.`,
-          narrativeInsight: `${name} absorbed mineral nutrients from the Devnet bedrock.`,
+          narrativeInsight: `${name} absorbed mineral nutrients from the Devnet bedrock.${traitInsight}`,
           isFallback: true,
         };
     }
@@ -79,7 +94,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
         mood: "Observant",
         speech: `*Floats gently in your wallet's aura* Ready to explore the ledger whenever you are. (Level ${level})`,
         thought: `Sensing gentle consensus waves rolling across the network.`,
-        narrativeInsight: `${name} hovers quietly, eyes glittering like fresh transactions.`,
+        narrativeInsight: `${name} hovers quietly, eyes glittering like fresh transactions.${traitInsight}`,
         isFallback: true,
       };
     case SPECIES_IDS.BYTEBEAST:
@@ -87,7 +102,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
         mood: "Energized",
         speech: `*Pistons pump with brisk clicks* Systems fully operational! Awaiting your command! (Level ${level})`,
         thought: `Calculating next XP milestone threshold.`,
-        narrativeInsight: `${name}'s internal clockwork ticks with relentless precision.`,
+        narrativeInsight: `${name}'s internal clockwork ticks with relentless precision.${traitInsight}`,
         isFallback: true,
       };
     case SPECIES_IDS.MOSSLING:
@@ -96,7 +111,7 @@ export function getFallbackDialogue(ctx: DialogueContext): DialogueResponse {
         mood: "Contemplative",
         speech: `*Breathes in the cool block air* Growth takes patience, but every confirmed slot counts. (Level ${level})`,
         thought: `Listening to the slow, steady hum of the cluster.`,
-        narrativeInsight: `${name} sits tranquilly, nestled amidst moss and cryptographic runes.`,
+        narrativeInsight: `${name} sits tranquilly, nestled amidst moss and cryptographic runes.${traitInsight}`,
         isFallback: true,
       };
   }
