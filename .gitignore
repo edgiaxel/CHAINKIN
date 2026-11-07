@@ -8,6 +8,10 @@ coverage/
 .env.*
 !.env.example
 target/
+**/target/
+Cargo.lock
+programs/chainkin/Cargo.lock
+*.tsbuildinfo
 .anchor/
 .DS_Store
 *.log

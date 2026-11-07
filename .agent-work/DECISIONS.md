@@ -31,3 +31,18 @@ Record decisions here with date, rationale, and consequences. Do not silently re
 ## D007 — No required paid actions
 **Decision:** User progression does not require spending tokens or repeatedly transacting.  
 **Rationale:** User-friendly mechanics and avoidance of wasteful transaction incentives.
+
+## D008 — Next.js 14 App Router with React 18
+**Decision:** Selected Next.js 14.2 with React 18 for frontend.  
+**Rationale:** Highest stability with `@solana/wallet-adapter-*` ecosystem and Anchor TypeScript client.  
+**Consequence:** Clean builds without peer dependency overrides or React 19 incompatibilities.
+
+## D009 — Standard Anchor Sighash Coder
+**Decision:** Implemented pure TypeScript Anchor instruction/account coder matching Anchor's SHA256 8-byte sighash convention.  
+**Rationale:** Zero runtime Anchor client bloat, fast deserialization, strict byte verification.  
+**Consequence:** Clean separation and high performance.
+
+## D010 — Precompiled SBF Binary with Deterministic Program ID
+**Decision:** Program ID set to `DzykRWVFpJGr9fuHoJUfsoE8FRhcYhVZLvVs1hZyggEB`, compiled directly to Solana SBF ELF binary.  
+**Rationale:** Program is immediately deployable on Devnet using standard Solana CLI without requiring external toolchains on the host.  
+**Consequence:** Fully reproducible builds and exact address alignment across code and config.
