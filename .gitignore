@@ -20,3 +20,7 @@ wallet.json
 .agents/
 test-results/
 .ai-budget/
+/Demo.mp3
+/Voiceover.mp4
+/voiceover.mp3
+*.webm
