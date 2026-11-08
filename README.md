@@ -12,8 +12,7 @@ AI provides conversational intelligence and responsive dialogue; the Solana Anch
 
 - **Live Application:** [https://chainkin.vercel.app](https://chainkin.vercel.app)
 - **Solana Devnet Program:** [`DzykRWVFpJGr9fuHoJUfsoE8FRhcYhVZLvVs1hZyggEB`](https://explorer.solana.com/address/DzykRWVFpJGr9fuHoJUfsoE8FRhcYhVZLvVs1hZyggEB?cluster=devnet)
-- **Product Demo Video:** `video/out/chainkin-demo.mp4` (Full 90s walkthrough with voiceover, real Devnet footage, and custom score)
-- **Demo Thumbnail:** `video/out/thumbnail.png`
+- **Demo Youtube:** [https://youtu.be/0bYPPlInOBg](https://youtu.be/0bYPPlInOBg) 
 
 ---
 
