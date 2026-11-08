@@ -1,0 +1,9 @@
+video/
+programs/
+test-results/
+.anchor/
+.ai-budget/
+*.mp4
+*.mp3
+scripts/
+.git

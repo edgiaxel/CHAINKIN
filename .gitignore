@@ -24,3 +24,5 @@ test-results/
 /Voiceover.mp4
 /voiceover.mp3
 *.webm
+.vercel
+.env*
