@@ -13,14 +13,19 @@ import {
   Radio,
   WifiOff,
   Flame,
+  Eye,
+  AlertCircle,
 } from "lucide-react";
+
+export type DialogueActionType = "talk" | "ponder" | "comfort" | "observe";
 
 export interface DialogueBoxProps {
   dialogue: DialogueResponse | null;
   loading?: boolean;
   isLoading?: boolean;
+  error?: string | null;
   onRefresh?: () => void;
-  onInteract?: (action: "talk" | "comfort" | "ponder") => void;
+  onInteract?: (action: DialogueActionType) => void;
   creature?: CreatureState;
 }
 
@@ -28,38 +33,66 @@ export const DialogueBox: FC<DialogueBoxProps> = ({
   dialogue,
   loading = false,
   isLoading = false,
+  error = null,
   onRefresh,
   onInteract,
   creature,
 }) => {
   const isBusy = loading || isLoading;
-  const [activeAction, setActiveAction] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<DialogueActionType | null>(null);
 
-  const handleAction = (action: "talk" | "comfort" | "ponder") => {
+  const handleAction = (action: DialogueActionType) => {
     setActiveAction(action);
     if (onInteract) {
       onInteract(action);
     } else if (onRefresh) {
       onRefresh();
     }
-    setTimeout(() => setActiveAction(null), 1000);
   };
 
   if (isBusy) {
     return (
-      <div className="w-full rounded-3xl bg-slate-900/80 border border-cyan-800/40 p-6 flex flex-col items-center justify-center min-h-[180px] text-slate-400 gap-3 shadow-xl backdrop-blur-xl animate-pulse">
+      <div className="w-full rounded-3xl bg-slate-900/80 border border-cyan-800/40 p-6 sm:p-8 flex flex-col items-center justify-center min-h-[200px] text-slate-400 gap-3 shadow-xl backdrop-blur-xl animate-pulse">
         <div className="relative">
-          <div className="w-10 h-10 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
-          <Brain className="w-5 h-5 text-cyan-400 absolute inset-0 m-auto" />
+          <div className="w-12 h-12 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+          <Brain className="w-6 h-6 text-cyan-400 absolute inset-0 m-auto animate-pulse" />
         </div>
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="flex flex-col items-center text-center gap-1">
           <span className="text-sm font-semibold text-slate-200">
-            Attuning to {creature?.name || "creature"} consciousness...
+            {activeAction === "ponder"
+              ? `Attuning to ${creature?.name || "companion"}'s deep reflections...`
+              : activeAction === "comfort"
+              ? `Channeling warmth to soothe ${creature?.name || "companion"}...`
+              : activeAction === "observe"
+              ? `Studying ${creature?.name || "companion"}'s ambient posture...`
+              : `Listening to ${creature?.name || "companion"}'s consciousness...`}
           </span>
           <span className="text-xs text-slate-500 font-mono">
-            Synthesizing emotional resonance & narrative thoughts
+            Synthesizing emotional resonance & narrative dialogue
           </span>
         </div>
+      </div>
+    );
+  }
+
+  if (error && !dialogue) {
+    return (
+      <div className="w-full rounded-3xl bg-slate-900/85 border border-red-800/50 p-6 flex flex-col items-center justify-center gap-3 shadow-xl text-center">
+        <AlertCircle className="w-8 h-8 text-red-400" />
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-semibold text-slate-200">Dialogue Disrupted</span>
+          <span className="text-xs text-red-300 max-w-sm">{error}</span>
+        </div>
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Reconnect Mind</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -178,16 +211,14 @@ export const DialogueBox: FC<DialogueBoxProps> = ({
           Engage Companion:
         </span>
 
-        <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+        {/* 4 Interaction Cards: Talk, Ponder, Comfort, Observe */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => handleAction("talk")}
             disabled={isBusy}
-            className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-              activeAction === "talk"
-                ? "bg-cyan-500 text-white border-cyan-400 shadow-md"
-                : "bg-slate-950/70 hover:bg-slate-800 text-cyan-300 border-cyan-800/50 hover:border-cyan-500/60"
-            }`}
+            title="Converse directly with your companion"
+            className="py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-slate-950/70 hover:bg-slate-800 text-cyan-300 border-cyan-800/50 hover:border-cyan-500/60 active:scale-95 disabled:opacity-50"
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Talk</span>
@@ -197,11 +228,8 @@ export const DialogueBox: FC<DialogueBoxProps> = ({
             type="button"
             onClick={() => handleAction("ponder")}
             disabled={isBusy}
-            className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-              activeAction === "ponder"
-                ? "bg-purple-600 text-white border-purple-400 shadow-md"
-                : "bg-slate-950/70 hover:bg-slate-800 text-purple-300 border-purple-900/50 hover:border-purple-500/60"
-            }`}
+            title="Invite deep crypto-philosophical reflection"
+            className="py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-slate-950/70 hover:bg-slate-800 text-purple-300 border-purple-900/50 hover:border-purple-500/60 active:scale-95 disabled:opacity-50"
           >
             <Brain className="w-3.5 h-3.5" />
             <span>Ponder</span>
@@ -211,14 +239,22 @@ export const DialogueBox: FC<DialogueBoxProps> = ({
             type="button"
             onClick={() => handleAction("comfort")}
             disabled={isBusy}
-            className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-              activeAction === "comfort"
-                ? "bg-rose-600 text-white border-rose-400 shadow-md"
-                : "bg-slate-950/70 hover:bg-slate-800 text-rose-300 border-rose-900/50 hover:border-rose-500/60"
-            }`}
+            title="Offer reassurance and empathetic affection"
+            className="py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-slate-950/70 hover:bg-slate-800 text-rose-300 border-rose-900/50 hover:border-rose-500/60 active:scale-95 disabled:opacity-50"
           >
             <Heart className="w-3.5 h-3.5" />
             <span>Comfort</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleAction("observe")}
+            disabled={isBusy}
+            title="Quietly observe creature behavior and demeanor"
+            className="py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 bg-slate-950/70 hover:bg-slate-800 text-emerald-300 border-emerald-900/50 hover:border-emerald-500/60 active:scale-95 disabled:opacity-50"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Observe</span>
           </button>
         </div>
       </div>

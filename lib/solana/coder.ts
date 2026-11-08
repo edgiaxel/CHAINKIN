@@ -90,6 +90,13 @@ export function decodeCreatureAccount(data: Buffer, pdaAddress: PublicKey): Crea
   const nameLen = data.readUInt32LE(offset);
   offset += 4;
 
+  if (nameLen > 32) {
+    throw new Error(`Invalid Creature name length: ${nameLen} exceeds max 32`);
+  }
+  if (data.length < offset + nameLen + 22) {
+    throw new Error(`Creature account data too short: expected at least ${offset + nameLen + 22} bytes, got ${data.length}`);
+  }
+
   const name = data.subarray(offset, offset + nameLen).toString("utf8");
   offset += nameLen;
 

@@ -31,7 +31,7 @@ export interface EvolutionModalProps {
   creature: CreatureState;
   isOpen: boolean;
   onClose: () => void;
-  onEvolved: (newState: CreatureState) => void;
+  onEvolved: (newState: CreatureState, signature?: string, choiceName?: string) => void;
 }
 
 export const EvolutionModal: FC<EvolutionModalProps> = ({
@@ -46,6 +46,7 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
   const choices = EVOLUTION_CATALOG[creature.species] || [];
   const [selectedChoice, setSelectedChoice] = useState<EvolutionChoice>(choices[0] || null);
   const [isEvolving, setIsEvolving] = useState<boolean>(false);
+  const [txStep, setTxStep] = useState<"idle" | "signing" | "confirming" | "celebration">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [narrative, setNarrative] = useState<EvolutionNarrativeResponse | null>(null);
@@ -65,6 +66,7 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
 
     try {
       setIsEvolving(true);
+      setTxStep("signing");
       setErrorMsg(null);
       setTxSignature(null);
 
@@ -78,6 +80,7 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
       // 2. Sign and send
       const signature = await wallet.sendTransaction(transaction, connection);
       setTxSignature(signature);
+      setTxStep("confirming");
 
       // 3. Confirm on Devnet
       const latestBlockhash = await connection.getLatestBlockhash("confirmed");
@@ -93,7 +96,7 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
       // 4. Fetch updated creature state from chain
       const { creature: updated } = await fetchCreatureAccount(wallet.publicKey, connection);
       if (updated) {
-        onEvolved(updated);
+        onEvolved(updated, signature, selectedChoice.name);
       }
 
       // 5. Fetch narrative flavor text
@@ -105,10 +108,12 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
         choiceName: selectedChoice.name,
       });
       setNarrative(nar);
+      setTxStep("celebration");
     } catch (err: any) {
       console.error("Evolution failed:", err);
+      setTxStep("idle");
       if (err.message?.includes("User rejected") || err.name === "WalletSignTransactionError") {
-        setErrorMsg("Evolution was cancelled in wallet.");
+        setErrorMsg("Evolution transaction signature was cancelled in wallet.");
       } else {
         setErrorMsg(err.message || "Failed to evolve creature on Devnet.");
       }
@@ -138,14 +143,30 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
             <div className="text-center flex flex-col items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-purple-950/80 border border-purple-700/50">
                 <Sparkles className="w-4 h-4 text-purple-300" />
-                Evolution Milestone Attained
+                Evolution Milestone Attained (Stage 1 of 3)
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 Transcend {creature.name}&apos;s Form
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 max-w-md">
-                Your companion has attained Level {creature.level} on Solana Devnet. Select its permanent evolutionary ascension path.
+                Your companion has attained Level {creature.level} on Solana Devnet. Select its permanent evolutionary ascension path. Subsequent milestones unlock at Level 7 and Level 15.
               </p>
+            </div>
+
+            {/* Evolution Milestones Roadmap Strip */}
+            <div className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl bg-slate-950/70 border border-purple-900/40 text-[10px] font-mono text-center">
+              <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-600/50 text-purple-200">
+                <strong className="block text-emerald-400 font-bold">Stage 1 (Unlocked)</strong>
+                <span>Level 3 / 100 XP</span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400">
+                <strong className="block text-slate-300">Stage 2 (Harmonic)</strong>
+                <span>Level 7 Milestone</span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400">
+                <strong className="block text-slate-300">Stage 3 (Apex)</strong>
+                <span>Level 15 Transcendent</span>
+              </div>
             </div>
 
             {/* Evolutionary Choices Grid */}
@@ -243,6 +264,17 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
               </div>
             )}
 
+            {/* Transaction approval explainer */}
+            <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-800/40 text-[11px] text-slate-300 flex items-start gap-2.5">
+              <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-0.5">
+                <span className="font-semibold text-purple-200">Solana Devnet Transaction Approval</span>
+                <span>
+                  Transcendence submits a real transaction to update your creature PDA on Devnet. This irreversibly transforms your companion into its chosen form.
+                </span>
+              </div>
+            </div>
+
             {/* Transaction feedback & alerts */}
             {errorMsg && (
               <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/60 border border-red-800 text-xs text-red-300">
@@ -251,17 +283,24 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
               </div>
             )}
 
-            {txSignature && (
+            {txStep === "signing" && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-950/70 border border-purple-800 text-xs text-purple-200">
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                <span>Awaiting transaction signature in your Solana wallet...</span>
+              </div>
+            )}
+
+            {txStep === "confirming" && txSignature && (
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-purple-800 text-xs text-slate-300">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                  <span>Transcending on Solana Devnet...</span>
+                  <span>Transcending form on Solana Devnet...</span>
                 </div>
                 <a
                   href={getExplorerUrl(txSignature)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-purple-400 hover:text-purple-300 font-mono font-medium"
+                  className="flex items-center gap-1 text-purple-400 hover:text-purple-300 font-mono font-medium underline"
                 >
                   <span>Explorer</span>
                   <ExternalLink className="w-3 h-3" />
@@ -303,7 +342,7 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
             {/* Glowing Evolved Avatar in Cosmic Aura */}
             <div className="relative my-2">
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 blur-2xl opacity-40 animate-pulse" />
-              <div className="relative creature-glow p-4 rounded-3xl bg-slate-950/60 border border-purple-500/40">
+              <div className="relative creature-celebrate p-4 rounded-3xl bg-slate-950/60 border border-purple-500/40">
                 <CreatureAvatar
                   species={creature.species}
                   evolutionStage={1}
@@ -350,9 +389,9 @@ export const EvolutionModal: FC<EvolutionModalProps> = ({
             {/* Return Button */}
             <button
               onClick={onClose}
-              className="w-full py-3.5 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition shadow-xl shadow-purple-900/30"
+              className="w-full py-3.5 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition shadow-xl shadow-purple-900/30 font-medium"
             >
-              Return to Companion
+              Return to Companion Dashboard
             </button>
           </div>
         )}

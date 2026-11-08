@@ -18,3 +18,5 @@ programs/chainkin/Cargo.lock
 *.keypair.json
 wallet.json
 .agents/
+test-results/
+.ai-budget/

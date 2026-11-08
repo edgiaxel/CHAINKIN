@@ -12,10 +12,19 @@ import { createInitializeCreatureTx, fetchCreatureAccount } from "@/lib/solana/t
 import { findCreaturePda } from "@/lib/solana/pda";
 import { getExplorerUrl } from "@/lib/solana/connection";
 import { CreatureAvatar } from "./CreatureAvatar";
-import { Sparkles, Loader2, AlertCircle, ExternalLink, ShieldCheck, Check } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  AlertCircle,
+  ExternalLink,
+  ShieldCheck,
+  Check,
+  Zap,
+  Info,
+} from "lucide-react";
 
 export interface HatchModalProps {
-  onHatched: (creature: CreatureState) => void;
+  onHatched: (creature: CreatureState, signature?: string) => void;
 }
 
 export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
@@ -25,6 +34,7 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
   const [selectedSpecies, setSelectedSpecies] = useState<SpeciesId>(SPECIES_IDS.WISP);
   const [name, setName] = useState<string>("");
   const [isHatching, setIsHatching] = useState<boolean>(false);
+  const [txStep, setTxStep] = useState<"idle" | "signing" | "confirming">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txSignature, setTxSignature] = useState<string | null>(null);
 
@@ -49,6 +59,7 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
 
     try {
       setIsHatching(true);
+      setTxStep("signing");
       setErrorMsg(null);
       setTxSignature(null);
 
@@ -63,6 +74,7 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
       // Send transaction with wallet adapter
       const signature = await wallet.sendTransaction(transaction, connection);
       setTxSignature(signature);
+      setTxStep("confirming");
 
       // Confirm transaction on Devnet
       const latestBlockhash = await connection.getLatestBlockhash("confirmed");
@@ -78,7 +90,7 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
       // Fetch confirmed creature state from chain
       const { creature } = await fetchCreatureAccount(wallet.publicKey, connection);
       if (creature) {
-        onHatched(creature);
+        onHatched(creature, signature);
       } else {
         // Fallback optimistic construct if RPC indexing delay
         const optimistic: CreatureState = {
@@ -95,14 +107,15 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
           lastActionSlot: 0,
           bump: findCreaturePda(wallet.publicKey)[1],
         };
-        onHatched(optimistic);
+        onHatched(optimistic, signature);
       }
     } catch (err: any) {
       console.error("Hatch transaction failed:", err);
+      setTxStep("idle");
       if (err.message?.includes("User rejected") || err.name === "WalletSignTransactionError") {
-        setErrorMsg("Hatching transaction was cancelled in wallet.");
+        setErrorMsg("Awakening transaction was cancelled in wallet.");
       } else {
-        setErrorMsg(err.message || "Failed to hatch creature on Devnet.");
+        setErrorMsg(err.message || "Failed to awaken creature on Devnet.");
       }
     } finally {
       setIsHatching(false);
@@ -110,17 +123,17 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-slate-900/90 border border-cyan-800/50 p-6 sm:p-8 shadow-2xl backdrop-blur-xl flex flex-col gap-6">
+    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-slate-900/90 border border-cyan-800/50 p-6 sm:p-8 shadow-2xl backdrop-blur-xl flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="text-center flex flex-col items-center gap-1.5">
         <div className="inline-flex items-center justify-center gap-2 text-cyan-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/60">
           <Sparkles className="w-3.5 h-3.5" />
           First-Time Awakening
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-          Hatch Your Chainkin
+          Awaken Your Chainkin Companion
         </h2>
         <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-          One creature per wallet. Permanently bonded and verified on Solana Devnet.
+          One creature per wallet. Permanently bonded to your Solana Devnet address as an authoritative Program Derived Address (PDA).
         </p>
       </div>
 
@@ -187,14 +200,27 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
           />
         </div>
 
-        {/* Transaction preview notice */}
+        {/* Transaction preview notice with Devnet SOL faucet guide */}
         <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/40 text-[11px] text-slate-400 flex items-start gap-2.5">
           <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             <span className="font-semibold text-slate-200">Solana Devnet Transaction</span>
             <span>
               Initializes a deterministic Creature PDA account under your wallet address. Estimated fee: ~0.001 Devnet SOL.
             </span>
+            <div className="flex items-center gap-1.5 pt-0.5 text-slate-400">
+              <Info className="w-3 h-3 text-cyan-400" />
+              <span>Need Devnet SOL? Grab free test tokens at</span>
+              <a
+                href="https://faucet.solana.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-300 hover:underline font-mono inline-flex items-center gap-0.5"
+              >
+                <span>faucet.solana.com</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
           </div>
         </div>
 
@@ -205,14 +231,24 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
           </div>
         )}
 
-        {txSignature && (
+        {txStep === "signing" && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-cyan-950/70 border border-cyan-800 text-xs text-cyan-200">
+            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+            <span>Awaiting transaction signature in your wallet...</span>
+          </div>
+        )}
+
+        {txStep === "confirming" && txSignature && (
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-cyan-800 text-xs text-slate-300">
-            <span>Tx Signature: {txSignature.slice(0, 8)}...</span>
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+              <span>Confirming awakening on Solana Devnet...</span>
+            </div>
             <a
               href={getExplorerUrl(txSignature)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-mono"
+              className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-mono underline"
             >
               <span>View Explorer</span>
               <ExternalLink className="w-3 h-3" />
@@ -233,7 +269,7 @@ export const HatchModal: FC<HatchModalProps> = ({ onHatched }) => {
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              <span>Hatch {activeMetadata.name}</span>
+              <span>Awaken {activeMetadata.name}</span>
             </>
           )}
         </button>

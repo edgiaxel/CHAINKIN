@@ -17,7 +17,19 @@ import {
   DEFAULT_PROGRAM_ID,
   CREATURE_SEED_PREFIX,
   getProgramId,
+  DEVNET_RPC_URL,
 } from "@/lib/solana/pda";
+import {
+  getSolanaConnection,
+  getExplorerUrl,
+  getAddressExplorerUrl,
+} from "@/lib/solana/connection";
+import {
+  getClientIp,
+  validatePayloadSize,
+  isValidSolanaAddress,
+  MAX_PAYLOAD_BYTES,
+} from "@/lib/ai/rateLimit";
 import { calculateLevel, SPECIES_IDS } from "@/lib/creature/types";
 
 describe("Solana Anchor Sighash & Binary Encoding Invariants", () => {
@@ -162,12 +174,13 @@ describe("State Progression & Saturating Arithmetic Resilience", () => {
     expect(calculateLevel(199)).toBe(3);
     expect(calculateLevel(200)).toBe(4);
     expect(calculateLevel(201)).toBe(4);
-    expect(calculateLevel(1_000)).toBe(4);
-    expect(calculateLevel(1_000_000)).toBe(4);
+    expect(calculateLevel(650)).toBe(7);
+    expect(calculateLevel(3200)).toBe(15);
+    expect(calculateLevel(1_000_000)).toBe(15);
 
-    // Maximum u32 value: 4,294,967,295
+    // Maximum u32 value: 4,294,967,295 (capped at Level 15 Transcendent Apex)
     const MAX_U32 = 0xffffffff;
-    expect(calculateLevel(MAX_U32)).toBe(4);
+    expect(calculateLevel(MAX_U32)).toBe(15);
   });
 
   it("simulates saturating arithmetic under extreme boundary conditions", () => {
@@ -283,3 +296,69 @@ describe("State Progression & Saturating Arithmetic Resilience", () => {
     expect(() => decodeCreatureAccount(corruptedBuf, pda)).toThrow(/Invalid Creature account discriminator/);
   });
 });
+
+describe("Devnet Network Targeting and Application Integrity Invariants", () => {
+  it("targets Solana Devnet exclusively without mainnet endpoints or credentials", () => {
+    expect(DEVNET_RPC_URL).toContain("devnet");
+    const connection = getSolanaConnection();
+    expect(connection.rpcEndpoint).toContain("devnet");
+
+    const txUrl = getExplorerUrl("testSig123");
+    expect(txUrl).toBe("https://explorer.solana.com/tx/testSig123?cluster=devnet");
+
+    const addrUrl = getAddressExplorerUrl("testAddr456");
+    expect(addrUrl).toBe("https://explorer.solana.com/address/testAddr456?cluster=devnet");
+  });
+
+  it("extracts client IP prioritizing cf-connecting-ip then x-forwarded-for then x-real-ip", () => {
+    // 1. cf-connecting-ip takes precedence
+    const req1 = new Request("http://localhost", {
+      headers: {
+        "cf-connecting-ip": "203.0.113.195",
+        "x-forwarded-for": "198.51.100.1, 192.0.2.1",
+        "x-real-ip": "192.0.2.200",
+      },
+    });
+    expect(getClientIp(req1)).toBe("203.0.113.195");
+
+    // 2. x-forwarded-for first IP if cf-connecting-ip absent
+    const req2 = new Request("http://localhost", {
+      headers: {
+        "x-forwarded-for": "198.51.100.1, 192.0.2.1",
+        "x-real-ip": "192.0.2.200",
+      },
+    });
+    expect(getClientIp(req2)).toBe("198.51.100.1");
+
+    // 3. x-real-ip if forwarded absent
+    const req3 = new Request("http://localhost", {
+      headers: {
+        "x-real-ip": "192.0.2.200",
+      },
+    });
+    expect(getClientIp(req3)).toBe("192.0.2.200");
+
+    // 4. Default fallback to 127.0.0.1
+    const req4 = new Request("http://localhost");
+    expect(getClientIp(req4)).toBe("127.0.0.1");
+  });
+
+  it("validates payload size limits to protect against oversized AI requests", () => {
+    expect(validatePayloadSize("500")).toBe(true);
+    expect(validatePayloadSize(null, 500)).toBe(true);
+    expect(validatePayloadSize(String(MAX_PAYLOAD_BYTES))).toBe(true);
+    expect(validatePayloadSize(String(MAX_PAYLOAD_BYTES + 1))).toBe(false);
+    expect(validatePayloadSize(null, MAX_PAYLOAD_BYTES + 100)).toBe(false);
+  });
+
+  it("validates Solana base58 public key addresses", () => {
+    const validKey = Keypair.generate().publicKey.toBase58();
+    expect(isValidSolanaAddress(validKey)).toBe(true);
+    expect(isValidSolanaAddress("DzykRWVFpJGr9fuHoJUfsoE8FRhcYhVZLvVs1hZyggEB")).toBe(true);
+    expect(isValidSolanaAddress("")).toBe(false);
+    expect(isValidSolanaAddress("invalid-chars-0OIl")).toBe(false);
+    expect(isValidSolanaAddress("short")).toBe(false);
+    expect(isValidSolanaAddress(undefined)).toBe(false);
+  });
+});
+

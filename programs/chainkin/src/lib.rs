@@ -229,7 +229,29 @@ pub fn get_evolution_bonus(species_id: u8, choice: u8) -> [u8; 4] {
 }
 
 pub fn calculate_level(xp: u32) -> u8 {
-    if xp >= 200 {
+    if xp >= 3200 {
+        15
+    } else if xp >= 2600 {
+        14
+    } else if xp >= 2100 {
+        13
+    } else if xp >= 1700 {
+        12
+    } else if xp >= 1400 {
+        11
+    } else if xp >= 1150 {
+        10
+    } else if xp >= 950 {
+        9
+    } else if xp >= 800 {
+        8
+    } else if xp >= 650 {
+        7
+    } else if xp >= 500 {
+        6
+    } else if xp >= 350 {
+        5
+    } else if xp >= 200 {
         4
     } else if xp >= 100 {
         3
@@ -280,10 +302,47 @@ mod tests {
         assert_eq!(calculate_level(100), 3);
         assert_eq!(calculate_level(199), 3);
         assert_eq!(calculate_level(200), 4);
+        assert_eq!(calculate_level(650), 7);
+        assert_eq!(calculate_level(3200), 15);
     }
 
     #[test]
     fn test_space_calculation() {
         assert_eq!(Creature::SPACE, 8 + 32 + 16 + 1 + 36 + 1 + 4 + 4 + 2 + 1 + 1 + 8 + 1);
+    }
+
+    #[test]
+    fn test_evolution_bonuses() {
+        assert_eq!(get_evolution_bonus(SPECIES_WISP, 1), [5, 2, 8, 3]);
+        assert_eq!(get_evolution_bonus(SPECIES_WISP, 2), [7, 4, 3, 6]);
+        assert_eq!(get_evolution_bonus(SPECIES_BYTEBEAST, 1), [2, 9, 3, 6]);
+        assert_eq!(get_evolution_bonus(SPECIES_BYTEBEAST, 2), [6, 7, 2, 9]);
+        assert_eq!(get_evolution_bonus(SPECIES_MOSSLING, 1), [3, 6, 10, 3]);
+        assert_eq!(get_evolution_bonus(SPECIES_MOSSLING, 2), [6, 4, 8, 6]);
+        assert_eq!(get_evolution_bonus(99, 1), [3, 3, 3, 3]);
+    }
+
+    #[test]
+    fn test_saturating_arithmetic_invariants() {
+        let max_xp: u32 = u32::MAX;
+        assert_eq!(max_xp.saturating_add(30), u32::MAX);
+        assert_eq!(max_xp.saturating_add(40), u32::MAX);
+
+        let max_trait: u8 = 255;
+        assert_eq!(max_trait.saturating_add(2), 255);
+        assert_eq!(max_trait.saturating_add(3), 255);
+        assert_eq!(max_trait.saturating_add(9), 255);
+
+        let max_rituals: u16 = u16::MAX;
+        assert_eq!(max_rituals.saturating_add(1), u16::MAX);
+    }
+
+    #[test]
+    fn test_evolution_eligibility_thresholds() {
+        assert!(calculate_level(EVOLUTION_REQUIRED_XP) >= EVOLUTION_REQUIRED_LEVEL);
+        assert_eq!(EVOLUTION_REQUIRED_LEVEL, 3);
+        assert_eq!(EVOLUTION_REQUIRED_XP, 100);
+        assert_eq!(EVOLUTION_CHOICE_A, 1);
+        assert_eq!(EVOLUTION_CHOICE_B, 2);
     }
 }

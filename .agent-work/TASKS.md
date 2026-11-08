@@ -52,6 +52,20 @@ Work top-to-bottom unless a task is blocked. Keep tasks small enough to verify i
 - [x] T046 Update README with actual implemented behavior and known limitations.
 - [x] T047 Produce acceptance-criteria evidence report.
 
+## P5 — Final Revision & Video Demo
+
+- [x] T050 Audit repository, verify Anchor PDA schema and defer multi-creature per wallet cleanly.
+- [x] T051 Implement daily AI request budget cap (35/day default) in `lib/ai/dailyBudget.ts` and routes.
+- [x] T052 Implement AI telemetry endpoint `/api/creature/status` with quota metrics.
+- [x] T053 Extend evolution milestones to Level 3, Level 7, Level 15 in Anchor program and frontend domain types.
+- [x] T054 Create centered floating top navigation bar (`components/layout/FloatingNav.tsx`).
+- [x] T055 Build multi-page app shell: `/`, `/creature`, `/collection`, `/card`, `/settings`.
+- [x] T056 End-to-end browser QA with Playwright (`e2e/app.spec.ts`) across desktop and mobile.
+- [x] T057 Implement 1080p 16:9 30fps 80s Remotion product demo composition in `video/`.
+- [x] T058 Render Remotion MP4 video to `video/out/chainkin-demo.mp4` and verify with ffprobe.
+- [x] T059 Compile comprehensive final revision report and manual demo walkthrough.
+
+
 ## Priority rule
 
 A working wallet → hatch → on-chain creature → ritual → confirmed progression → AI dialogue path is more valuable than partially implementing every listed feature. If time becomes critical, defer evolution UI, extra rituals, and animation polish before compromising the core vertical slice.

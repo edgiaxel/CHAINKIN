@@ -1,10 +1,10 @@
 # Progress Log
 
-**Current status:** Complete (MVP Ready)  
-**Current task:** T047 (Final Completion Verification)  
+**Current status:** Complete (Final Product Revision & YouTube Product Demo Delivered)  
+**Current task:** T059 (Final Revision Verification)  
 **Current branch:** main  
-**Last verified commit:** `e8ea0057ada3d19f5cf3b0997c8478ae9fcff95e`  
-**Last verified build:** Passing (Typecheck, Lint, Tests, Production Build, SBF Compile)
+**Last verified commit:** `02deaf0`  
+**Last verified build:** Passing (Typecheck, Lint, Tests, Production Build, Anchor Tests, Playwright E2E, Remotion Video)
 
 ## Completed tasks
 
@@ -41,12 +41,31 @@
 - **T045**: Added Solana Explorer Devnet transaction links for all on-chain actions.
 - **T046**: Updated `README.md` with full setup, testing, deployment, and demo walkthrough.
 - **T047**: Produced complete acceptance criteria verification report.
+- **T050**: Audited repository, confirmed Anchor PDA derivation scheme `[b"creature", owner]` permits one creature account per wallet, and implemented watch-only collection management.
+- **T051**: Implemented daily AI request budget cap (35/day default) with filesystem persistence in `lib/ai/dailyBudget.ts`.
+- **T052**: Implemented AI telemetry endpoint `app/api/creature/status/route.ts` reporting provider, budget usage, and Devnet cluster info without exposing secrets.
+- **T053**: Extended evolution milestones to Level 3, Level 7, and Level 15 across Anchor Rust program (`programs/chainkin/src/lib.rs`) and TypeScript types (`lib/creature/types.ts`).
+- **T054**: Created centered floating top navigation bar (`components/layout/FloatingNav.tsx`) with active indicator and responsive styling.
+- **T055**: Built multi-page application shell: `/`, `/creature`, `/collection`, `/card`, and `/settings`.
+- **T056**: Created automated browser QA test suite with Playwright (`playwright.config.ts`, `e2e/app.spec.ts`) covering 6 core scenarios on Desktop Chromium and Mobile Chrome (12/12 passing).
+- **T057**: Created 7-scene Remotion YouTube product demo composition (1080p, 16:9, 30fps, 80s) in `video/`.
+- **T058**: Rendered Remotion MP4 video to `video/out/chainkin-demo.mp4` and verified file integrity with `ffprobe`.
+- **T059**: Compiled comprehensive final hackathon revision report and manual walkthrough.
 
 ## Verification evidence
 
 - `npm run typecheck`: 0 errors.
 - `npm run lint`: 0 warnings, 0 errors.
-- `npm test`: 14 tests passed across 3 test suites (`domain.test.ts`, `coder.test.ts`, `integration.test.ts`).
-- `cargo test --manifest-path programs/chainkin/Cargo.toml`: 4 tests passed.
+- `npm test`: 94 passed, 1 skipped across 7 test suites (`domain.test.ts`, `coder.test.ts`, `integration.test.ts`, `frontend_journey.test.ts`, `ai.test.ts`, `solana_challenge.test.ts`, `empirical_challenge.test.ts`).
+- `cargo test --manifest-path programs/chainkin/Cargo.toml`: 7 passed, 0 failed.
+- `npm run build`: Production Next.js build clean, static prerendering succeeded for 8 pages.
+- `npx playwright test`: 12 passed across Desktop Chromium and Mobile Chrome (100% pass rate).
+- `ffprobe -v error -show_entries stream=width,height,r_frame_rate,codec_name -show_entries format=duration,size -of default=noprint_wrappers=1 video/out/chainkin-demo.mp4`:
+  - Codec: H.264
+  - Resolution: 1920x1080 (16:9)
+  - Frame rate: 30 fps
+  - Duration: 80.00s
+  - File size: 2,093,035 bytes (~2.1 MB)
+
 - `cargo-build-sbf --manifest-path programs/chainkin/Cargo.toml`: compiled SBF binary `programs/chainkin/target/deploy/chainkin.so`.
 - `npm run build`: Next.js production build succeeded; 4 routes generated.

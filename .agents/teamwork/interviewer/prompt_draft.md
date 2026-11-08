@@ -1,4 +1,4 @@
-Organize the team into three specialized workstreams (Agent A — AI Engineering, Agent B — Creature Experience, Agent C — Solana Security Review) with a Main Orchestrator to turn Chainkin into a living AI creature companion while preserving the existing working Solana Devnet MVP functionality.
+Use a maximum of 4 specialist agents plus the main orchestrator to turn the existing Chainkin prototype into a coherent, polished, demonstrable AI-powered Solana companion application for the final submission of a Solana hackathon.
 
 Working directory: /home/axel/Development/CHAINKIN
 Integrity mode: demo
@@ -6,43 +6,36 @@ The team must NOT: copy code from existing open-source projects for core logic, 
 
 ## Requirements
 
-### R1. Repository Inspection and Workstream Architecture (Main Orchestrator)
-Inspect the entire repository and verify the actual implementation against code and tests rather than trusting documentation or checkboxes. Establish explicit file ownership, shared interfaces, and task boundaries across workstreams before parallel implementation begins. Ensure architecture, integration, conflict resolution, and final verification uphold all project rules.
+### R1. AI Companion Engineering
+Implement relevant, context-aware creature dialogue for Talk, Ponder, Comfort, and Observe interactions, as well as distinct reactions following rituals and evolution. Dialogue must reflect species, personality traits, mood, progression level, and evolution stage without species sounding identical. Validate Liquid LFM3 1.7B output via structured output validation with safe fallbacks, avoiding silent API consumption, with all API keys kept strictly server-side.
 
-### R2. Live AI Dialogue and Trait-Aware Personality (Agent A — AI Engineering)
-Integrate OpenRouter using model `liquid/lfm-3-1.7b` behind a provider-independent interface, reading the API key from `env.local` server-side without exposing secrets to frontend code. Construct creature dialogue prompts that dynamically reflect on-chain creature state (stage and rituals performed). Implement structured output validation, server-side in-memory rate limiting by IP/wallet to prevent abuse, and automated tests using deterministic mocks to conserve API rate limits.
+### R2. Product Experience and Frontend User Journey
+Transform the creature view into a complete user journey: Welcome/Home explaining the concept and wallet link, onboarding to awaken or load a companion, a visually focused companion dashboard displaying authoritative on-chain state and traits, distinct interaction cards with clear loading/error states, transparent progression/evolution requirements and transaction approval, and a simple activity history distinguishing blockchain transactions from narrative events.
 
-### R3. Creature Experience and Presentation UX (Agent B — Creature Experience)
-Deliver creature presentation improvements, a personality UI reflecting creature state, an interactive dialogue experience, evolution presentation, and responsive frontend enhancements across viewport sizes while preserving all existing wallet and ritual flows.
+### R3. Solana and Application Integrity
+Preserve existing working Solana Devnet implementation (wallet connection, PDA derivation, creature awakening, ritual transactions, XP/trait progression, and evolution transactions). Enforce server-side rate-limiting and validation on public AI endpoints. Keep blockchain state authoritative, operate solely on Solana Devnet, use wallet-adapter signing without touching private keys, and introduce no tokenomics, trading, staking, or marketplace features.
 
-### R4. Solana Anchor Program Security Review (Agent C — Solana Security Review)
-Perform a read-only security audit of the Anchor program, PDA ownership, transaction handling, progression rules, cooldowns, and test coverage, documenting findings and verifying that Devnet constraints and security invariants hold.
-
-### R5. System Constraints and Integration
-Preserve all existing working Solana Devnet functionality. The system must operate strictly on Solana Devnet (never Mainnet), use wallet-adapter signing flows (never touch private keys or seed phrases), and contain no marketplace, breeding, multiplayer, or tokenomics mechanics.
+### R4. QA, Integration, and Demo Readiness
+Coordinate verification across the 4 specialist workstreams and create a test plan covering first-time users, returning users, transaction rejections/failures, AI fallbacks, and progression flows. Run existing test suites (`cargo test`, `vitest`) and provide a manual end-to-end demo script, final deliverables list, and verification of working features without regressions.
 
 ## Acceptance Criteria
 
-### Workstream Setup & Integrity
-- [ ] Initial repository inspection is documented and explicit file ownership boundaries are established before implementation begins.
-- [ ] No code is copied from existing open-source projects for core logic, and no external scripts or tools are delegated execution.
+### User Onboarding & Experience
+- [ ] Welcome/Home screen clearly introduces Chainkin, explains wallet linkage, and guides first-time users to awaken a creature.
+- [ ] Returning wallets load their existing companion directly with authoritative on-chain state (species, level, stage, XP, traits, mood).
+- [ ] UI provides responsive, polished layouts with clear loading, error, pending, and confirmed transaction states.
 
-### AI Provider & Dialogue Engine
-- [ ] OpenRouter API client connects to model `liquid/lfm-3-1.7b` using `OPENROUTER_API_KEY` from `env.local` server-side.
-- [ ] Public AI endpoints enforce server-side in-memory rate limiting by IP/wallet and return standard 429 status when exceeded.
-- [ ] AI prompt construction incorporates creature stage and ritual history dynamically from on-chain data.
-- [ ] AI responses adhere to structured output validation with deterministic fallback if the upstream model fails or is rate-limited.
-- [ ] Automated tests for AI dialogue execute deterministically with mocks, accompanied by at most one controlled live connectivity smoke test.
+### AI Companion Dialogue
+- [ ] Talk, Ponder, Comfort, and Observe actions return contextually relevant responses reflecting species, traits, mood, and stage.
+- [ ] Ritual completion and evolution trigger distinct acknowledgments reflecting state changes.
+- [ ] AI endpoints enforce server-side rate limits and validation; structured output parsing handles malformed responses gracefully with safe fallbacks.
+- [ ] No API keys are exposed to client-side code or committed.
 
-### Creature UX
-- [ ] Creature interface displays personality traits, dialogue interactions, and evolution milestones responsively.
-- [ ] Existing wallet connection, creature initialization, and ritual execution work without regression.
+### Solana Integrity & Progression
+- [ ] Existing Devnet wallet connection, creature awakening, ritual transactions, and evolution transactions function without regression.
+- [ ] Authority and progression logic remain strictly on-chain; client cannot fabricate XP, traits, or evolution.
+- [ ] No private keys or seed phrases are handled by the application; no trading, staking, or tokenomics mechanics are added.
 
-### Solana Anchor Security
-- [ ] Read-only security audit verifies PDA seeds (`[b"creature", owner]`), authority checks, progression state increments, and cooldown enforcements.
-- [ ] Security audit report details findings and confirms zero unaddressed critical vulnerabilities.
-
-### System Verification
-- [ ] All existing tests (`cargo test`, `vitest`), type checks, and linters pass cleanly with new tests covering v0.2 functionality.
-- [ ] No private keys or seed phrases are accessed or stored.
-- [ ] No marketplace, breeding, multiplayer, or tokenomics code exists in the codebase.
+### Integration & Verification
+- [ ] All existing automated tests (`cargo test`, `vitest`), TypeScript checks, and linters pass cleanly.
+- [ ] A verified manual end-to-end demo script and final implementation report detailing working features and demo steps are produced.

@@ -5,10 +5,12 @@ import {
 } from "@/lib/ai/types";
 import { getFallbackEvolutionNarrative } from "@/lib/ai/fallback";
 import { checkRequestRateLimit, createRateLimitResponse } from "@/lib/ai/rateLimit";
+import { consumeDailyBudget } from "@/lib/ai/dailyBudget";
 import {
   callOpenRouter,
   extractJsonFromMarkdown,
   getOpenRouterApiKey,
+  buildCreatureEvolutionPrompt,
 } from "@/lib/ai/openrouter";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +29,23 @@ export async function POST(req: NextRequest) {
 
     const reqData = parseResult.data;
 
-    // 1. Enforce server-side in-memory rate limiting by IP and wallet
+    // 1. Rate limiting by IP and wallet
     const rateLimitResult = checkRequestRateLimit(req, reqData.walletAddress);
     if (!rateLimitResult.success) {
       return createRateLimitResponse(rateLimitResult);
     }
 
-    // 2. Secret hygiene: Check API key server-side
+    // 2. Daily budget check (35/day default)
+    const budget = consumeDailyBudget();
+    if (!budget.allowed) {
+      return NextResponse.json(getFallbackEvolutionNarrative(reqData), {
+        headers: {
+          "X-Daily-Budget-Remaining": "0",
+        },
+      });
+    }
+
+    // 3. Secret hygiene: Check API key server-side
     const apiKey = getOpenRouterApiKey();
     const provider = process.env.AI_PROVIDER || "openrouter";
 
@@ -41,14 +53,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(getFallbackEvolutionNarrative(reqData));
     }
 
-    // 3. Generate narrative with OpenRouter
+    // 4. Generate narrative with OpenRouter
     try {
-      const prompt = `Chainkin creature "${reqData.name}" has just evolved into "${reqData.choiceName}" on Solana Devnet.
-Generate triumphant flavor text for this ascension milestone.
-Respond in strict JSON with keys:
-"title": short headline, max 40 chars.
-"proclamation": creature's triumphant exclamation, max 160 chars.
-"transformationSummary": narrator summary, max 240 chars.`;
+      const prompt = buildCreatureEvolutionPrompt(reqData);
 
       const completion = await callOpenRouter({
         messages: [
@@ -62,9 +69,10 @@ Respond in strict JSON with keys:
         responseFormatJson: true,
         maxTokens: 250,
         temperature: 0.7,
+        timeoutMs: 15_000,
       });
 
-      // 4. Structured output validation with markdown code fence stripping
+      // 5. Structured output validation with markdown code fence stripping
       const cleanedJson = extractJsonFromMarkdown(completion.content);
       const parsedJson = JSON.parse(cleanedJson);
 
@@ -76,7 +84,11 @@ Respond in strict JSON with keys:
       });
 
       if (validated.success) {
-        return NextResponse.json(validated.data);
+        return NextResponse.json(validated.data, {
+          headers: {
+            "X-Daily-Budget-Remaining": String(budget.remaining),
+          },
+        });
       }
       console.warn("Evolution AI response validation failed schema:", validated.error);
     } catch (err) {

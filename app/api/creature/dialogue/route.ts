@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { DialogueContextSchema, DialogueResponseSchema } from "@/lib/ai/types";
 import { getFallbackDialogue } from "@/lib/ai/fallback";
 import { checkRequestRateLimit, createRateLimitResponse } from "@/lib/ai/rateLimit";
+import { consumeDailyBudget } from "@/lib/ai/dailyBudget";
 import {
   buildCreatureDialoguePrompt,
   callOpenRouter,
@@ -25,13 +26,26 @@ export async function POST(req: NextRequest) {
 
     const ctx = parseResult.data;
 
-    // 1. Enforce server-side in-memory rate limiting by IP and wallet
+    // 1. Per-minute rate limiting by IP and wallet
     const rateLimitResult = checkRequestRateLimit(req, ctx.walletAddress);
     if (!rateLimitResult.success) {
       return createRateLimitResponse(rateLimitResult);
     }
 
-    // 2. Secret hygiene: Check API key server-side
+    // 2. Daily budget check (35/day default, configurable)
+    const budget = consumeDailyBudget();
+    if (!budget.allowed) {
+      const fallback = getFallbackDialogue(ctx);
+      return NextResponse.json(fallback, {
+        headers: {
+          "X-Daily-Budget-Limit": String(budget.limit),
+          "X-Daily-Budget-Used": String(budget.used),
+          "X-Daily-Budget-Remaining": "0",
+        },
+      });
+    }
+
+    // 3. API key check
     const apiKey = getOpenRouterApiKey();
     const provider = process.env.AI_PROVIDER || "openrouter";
 
@@ -39,7 +53,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(getFallbackDialogue(ctx));
     }
 
-    // 3. Generate dialogue with OpenRouter
+    // 4. Generate dialogue with OpenRouter
     try {
       const prompt = buildCreatureDialoguePrompt(ctx);
       const completion = await callOpenRouter({
@@ -54,9 +68,10 @@ export async function POST(req: NextRequest) {
         responseFormatJson: true,
         maxTokens: 250,
         temperature: 0.7,
+        timeoutMs: 15_000,
       });
 
-      // 4. Structured output validation with markdown code fence stripping
+      // 5. Structured output validation with markdown code fence stripping
       const cleanedJson = extractJsonFromMarkdown(completion.content);
       const parsedJson = JSON.parse(cleanedJson);
 
@@ -69,14 +84,18 @@ export async function POST(req: NextRequest) {
       });
 
       if (validated.success) {
-        return NextResponse.json(validated.data);
+        return NextResponse.json(validated.data, {
+          headers: {
+            "X-Daily-Budget-Remaining": String(budget.remaining),
+          },
+        });
       }
       console.warn("Dialogue AI response validation failed schema:", validated.error);
     } catch (aiErr) {
       console.warn("AI generation failed or timed out, activating deterministic fallback:", aiErr);
     }
 
-    // 5. Fallback if model fails, times out, or returns invalid format
+    // 6. Fallback if model fails, times out, or returns invalid format
     return NextResponse.json(getFallbackDialogue(ctx));
   } catch (error) {
     console.error("Dialogue route unexpected error:", error);

@@ -25,6 +25,8 @@ describe("Creature Domain Logic", () => {
     expect(calculateLevel(100)).toBe(3);
     expect(calculateLevel(199)).toBe(3);
     expect(calculateLevel(200)).toBe(4);
+    expect(calculateLevel(650)).toBe(7);
+    expect(calculateLevel(3200)).toBe(15);
   });
 
   it("checks evolution eligibility correctly", () => {

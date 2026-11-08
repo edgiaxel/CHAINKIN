@@ -30,28 +30,27 @@ export async function fetchCreatureAccount(
   programId: PublicKey = getProgramId()
 ): Promise<{ pda: PublicKey; creature: CreatureState | null }> {
   const [pda] = findCreaturePda(owner, programId);
-  const accountInfo = await connection.getAccountInfo(pda, "confirmed");
-
-  if (!accountInfo || !accountInfo.data || accountInfo.data.length === 0) {
-    return { pda, creature: null };
-  }
-
   try {
+    const accountInfo = await connection.getAccountInfo(pda, "confirmed");
+
+    if (!accountInfo || !accountInfo.data || accountInfo.data.length === 0) {
+      return { pda, creature: null };
+    }
+
     const creature = decodeCreatureAccount(accountInfo.data as Buffer, pda);
     return { pda, creature };
   } catch (err) {
-    console.warn("Failed to decode creature account:", err);
+    console.warn("Failed to fetch or decode creature account:", err);
     return { pda, creature: null };
   }
 }
 
-export async function createInitializeCreatureTx(
+export function createInitializeCreatureInstruction(
   owner: PublicKey,
   speciesId: number,
   name: string,
-  connection: Connection = getSolanaConnection(),
   programId: PublicKey = getProgramId()
-): Promise<{ transaction: Transaction; pda: PublicKey }> {
+): { instruction: TransactionInstruction; pda: PublicKey } {
   const [pda] = findCreaturePda(owner, programId);
   const instructionData = encodeInitializeCreatureInstruction(speciesId, name);
 
@@ -67,6 +66,17 @@ export async function createInitializeCreatureTx(
     data: instructionData,
   });
 
+  return { instruction, pda };
+}
+
+export async function createInitializeCreatureTx(
+  owner: PublicKey,
+  speciesId: number,
+  name: string,
+  connection: Connection = getSolanaConnection(),
+  programId: PublicKey = getProgramId()
+): Promise<{ transaction: Transaction; pda: PublicKey }> {
+  const { instruction, pda } = createInitializeCreatureInstruction(owner, speciesId, name, programId);
   const tx = new Transaction().add(instruction);
   tx.feePayer = owner;
   const { blockhash } = await connection.getLatestBlockhash("confirmed");
@@ -75,12 +85,11 @@ export async function createInitializeCreatureTx(
   return { transaction: tx, pda };
 }
 
-export async function createPerformRitualTx(
+export function createPerformRitualInstruction(
   owner: PublicKey,
   ritualId: number,
-  connection: Connection = getSolanaConnection(),
   programId: PublicKey = getProgramId()
-): Promise<{ transaction: Transaction; pda: PublicKey }> {
+): { instruction: TransactionInstruction; pda: PublicKey } {
   const [pda] = findCreaturePda(owner, programId);
   const instructionData = encodePerformRitualInstruction(ritualId);
 
@@ -95,6 +104,16 @@ export async function createPerformRitualTx(
     data: instructionData,
   });
 
+  return { instruction, pda };
+}
+
+export async function createPerformRitualTx(
+  owner: PublicKey,
+  ritualId: number,
+  connection: Connection = getSolanaConnection(),
+  programId: PublicKey = getProgramId()
+): Promise<{ transaction: Transaction; pda: PublicKey }> {
+  const { instruction, pda } = createPerformRitualInstruction(owner, ritualId, programId);
   const tx = new Transaction().add(instruction);
   tx.feePayer = owner;
   const { blockhash } = await connection.getLatestBlockhash("confirmed");
@@ -103,12 +122,11 @@ export async function createPerformRitualTx(
   return { transaction: tx, pda };
 }
 
-export async function createEvolveTx(
+export function createEvolveInstruction(
   owner: PublicKey,
   evolutionChoice: number,
-  connection: Connection = getSolanaConnection(),
   programId: PublicKey = getProgramId()
-): Promise<{ transaction: Transaction; pda: PublicKey }> {
+): { instruction: TransactionInstruction; pda: PublicKey } {
   const [pda] = findCreaturePda(owner, programId);
   const instructionData = encodeEvolveInstruction(evolutionChoice);
 
@@ -123,6 +141,16 @@ export async function createEvolveTx(
     data: instructionData,
   });
 
+  return { instruction, pda };
+}
+
+export async function createEvolveTx(
+  owner: PublicKey,
+  evolutionChoice: number,
+  connection: Connection = getSolanaConnection(),
+  programId: PublicKey = getProgramId()
+): Promise<{ transaction: Transaction; pda: PublicKey }> {
+  const { instruction, pda } = createEvolveInstruction(owner, evolutionChoice, programId);
   const tx = new Transaction().add(instruction);
   tx.feePayer = owner;
   const { blockhash } = await connection.getLatestBlockhash("confirmed");

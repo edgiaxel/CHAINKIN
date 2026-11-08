@@ -14,6 +14,26 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* Custom Scrollbar for activity timeline and dialogue */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.45);
+}
+
 @keyframes pulseGlow {
   0%, 100% {
     filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.35));
@@ -41,6 +61,17 @@ body {
   }
 }
 
+@keyframes auraBreathe {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.03);
+  }
+}
+
 .creature-glow {
   animation: pulseGlow 4s ease-in-out infinite;
 }
@@ -51,4 +82,8 @@ body {
 
 .float-animation {
   animation: floatGentle 5s ease-in-out infinite;
+}
+
+.aura-breathe {
+  animation: auraBreathe 4s ease-in-out infinite;
 }

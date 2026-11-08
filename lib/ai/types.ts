@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const DialogueActionSchema = z.enum(["talk", "ponder", "comfort", "observe"]);
+export type DialogueAction = z.infer<typeof DialogueActionSchema>;
+
 export const DialogueContextSchema = z.object({
   species: z.union([z.literal(0), z.literal(1), z.literal(2)]),
   speciesName: z.string().min(1).max(32),
@@ -8,6 +11,8 @@ export const DialogueContextSchema = z.object({
   xp: z.number().int().min(0),
   evolutionStage: z.number().int().min(0).max(10),
   evolutionName: z.string().max(32).optional(),
+  action: DialogueActionSchema.optional(),
+  currentMood: z.string().max(30).optional(),
   recentRitual: z.enum(["none", "observe", "bond", "explore"]).default("none"),
   traits: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(), // [curiosity, courage, empathy, ingenuity]
   ritualCount: z.number().int().nonnegative().optional(),
@@ -28,10 +33,13 @@ export type DialogueResponse = z.infer<typeof DialogueResponseSchema>;
 
 export const EvolutionNarrativeRequestSchema = z.object({
   species: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+  speciesName: z.string().min(1).max(32).optional(),
   name: z.string().min(1).max(32),
   level: z.number().int().min(1).max(100),
   choiceId: z.union([z.literal(1), z.literal(2)]),
   choiceName: z.string().min(1).max(32),
+  traits: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+  evolutionStage: z.number().int().min(1).max(10).optional(),
   walletAddress: z.string().optional(),
 });
 

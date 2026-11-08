@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   anchorSighash,
   CREATURE_ACCOUNT_DISCRIMINATOR,
@@ -11,6 +11,12 @@ import {
   encodeEvolveInstruction,
   decodeCreatureAccount,
 } from "@/lib/solana/coder";
+import {
+  createInitializeCreatureInstruction,
+  createPerformRitualInstruction,
+  createEvolveInstruction,
+} from "@/lib/solana/transactions";
+import { findCreaturePda, getProgramId } from "@/lib/solana/pda";
 
 describe("Solana Anchor Coder", () => {
   it("computes anchor sighash correctly", () => {
@@ -107,4 +113,109 @@ describe("Solana Anchor Coder", () => {
     expect(decoded.lastActionSlot).toBe(123456);
     expect(decoded.bump).toBe(253);
   });
+
+  it("throws when decoding an account with name length exceeding 32 characters", () => {
+    const owner = new PublicKey("7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU");
+    const pda = new PublicKey("CK1N111111111111111111111111111111111111111");
+    const buf = Buffer.alloc(120);
+
+    CREATURE_ACCOUNT_DISCRIMINATOR.copy(buf, 0);
+    owner.toBuffer().copy(buf, 8);
+    // species at offset 56
+    buf.writeUInt8(0, 56);
+    // nameLen = 33 (> 32)
+    buf.writeUInt32LE(33, 57);
+
+    expect(() => decodeCreatureAccount(buf, pda)).toThrow(/Invalid Creature name length/);
+  });
+
+  it("throws when decoding truncated creature accounts", () => {
+    const pda = new PublicKey("CK1N111111111111111111111111111111111111111");
+
+    // Extremely short buffer
+    expect(() => decodeCreatureAccount(Buffer.alloc(20), pda)).toThrow(
+      /Creature account data too short/
+    );
+
+    // Buffer with valid header and name length, but truncated tail
+    const owner = new PublicKey("7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU");
+    const buf = Buffer.alloc(70); // Needs 61 + 5 + 22 = 88 bytes
+    CREATURE_ACCOUNT_DISCRIMINATOR.copy(buf, 0);
+    owner.toBuffer().copy(buf, 8);
+    buf.writeUInt8(0, 56);
+    buf.writeUInt32LE(5, 57); // 5-byte name
+    Buffer.from("Hello").copy(buf, 61);
+
+    expect(() => decodeCreatureAccount(buf, pda)).toThrow(/Creature account data too short/);
+  });
 });
+
+describe("Solana Transaction Instruction Builders", () => {
+  const owner = new PublicKey("7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU");
+  const programId = getProgramId();
+  const [expectedPda] = findCreaturePda(owner, programId);
+
+  it("builds valid initialize_creature instruction", () => {
+    const { instruction, pda } = createInitializeCreatureInstruction(owner, 0, "Lumi", programId);
+    expect(pda.toBase58()).toBe(expectedPda.toBase58());
+    expect(instruction.programId.toBase58()).toBe(programId.toBase58());
+    expect(instruction.keys).toHaveLength(3);
+
+    // Key 0: PDA (writable, not signer)
+    expect(instruction.keys[0].pubkey.toBase58()).toBe(expectedPda.toBase58());
+    expect(instruction.keys[0].isSigner).toBe(false);
+    expect(instruction.keys[0].isWritable).toBe(true);
+
+    // Key 1: Owner (writable, signer)
+    expect(instruction.keys[1].pubkey.toBase58()).toBe(owner.toBase58());
+    expect(instruction.keys[1].isSigner).toBe(true);
+    expect(instruction.keys[1].isWritable).toBe(true);
+
+    // Key 2: System Program (read-only, not signer)
+    expect(instruction.keys[2].pubkey.toBase58()).toBe(SystemProgram.programId.toBase58());
+    expect(instruction.keys[2].isSigner).toBe(false);
+    expect(instruction.keys[2].isWritable).toBe(false);
+
+    expect(instruction.data).toEqual(encodeInitializeCreatureInstruction(0, "Lumi"));
+  });
+
+  it("builds valid perform_ritual instruction", () => {
+    const { instruction, pda } = createPerformRitualInstruction(owner, 1, programId);
+    expect(pda.toBase58()).toBe(expectedPda.toBase58());
+    expect(instruction.programId.toBase58()).toBe(programId.toBase58());
+    expect(instruction.keys).toHaveLength(2);
+
+    // Key 0: PDA (writable, not signer)
+    expect(instruction.keys[0].pubkey.toBase58()).toBe(expectedPda.toBase58());
+    expect(instruction.keys[0].isSigner).toBe(false);
+    expect(instruction.keys[0].isWritable).toBe(true);
+
+    // Key 1: Owner (read-only, signer)
+    expect(instruction.keys[1].pubkey.toBase58()).toBe(owner.toBase58());
+    expect(instruction.keys[1].isSigner).toBe(true);
+    expect(instruction.keys[1].isWritable).toBe(false);
+
+    expect(instruction.data).toEqual(encodePerformRitualInstruction(1));
+  });
+
+  it("builds valid evolve instruction", () => {
+    const { instruction, pda } = createEvolveInstruction(owner, 2, programId);
+    expect(pda.toBase58()).toBe(expectedPda.toBase58());
+    expect(instruction.programId.toBase58()).toBe(programId.toBase58());
+    expect(instruction.keys).toHaveLength(2);
+
+    // Key 0: PDA (writable, not signer)
+    expect(instruction.keys[0].pubkey.toBase58()).toBe(expectedPda.toBase58());
+    expect(instruction.keys[0].isSigner).toBe(false);
+    expect(instruction.keys[0].isWritable).toBe(true);
+
+    // Key 1: Owner (read-only, signer)
+    expect(instruction.keys[1].pubkey.toBase58()).toBe(owner.toBase58());
+    expect(instruction.keys[1].isSigner).toBe(true);
+    expect(instruction.keys[1].isWritable).toBe(false);
+
+    expect(instruction.data).toEqual(encodeEvolveInstruction(2));
+  });
+});
+
+

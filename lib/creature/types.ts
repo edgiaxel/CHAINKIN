@@ -94,6 +94,9 @@ export const RITUAL_CATALOG: Record<RitualId, RitualMetadata> = {
 
 export interface EvolutionChoice {
   id: number;
+  stage: number; // 1, 2, or 3
+  requiredLevel: number;
+  requiredXp: number;
   speciesId: SpeciesId;
   name: string;
   title: string;
@@ -101,10 +104,14 @@ export interface EvolutionChoice {
   traitBonus: [number, number, number, number];
 }
 
+// Stage I (Level 3 / 100 XP)
 export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionChoice]> = {
   [SPECIES_IDS.WISP]: [
     {
       id: 1,
+      stage: 1,
+      requiredLevel: 3,
+      requiredXp: 100,
       speciesId: SPECIES_IDS.WISP,
       name: "Astral Guide",
       title: "The Ethereal Navigator",
@@ -113,6 +120,9 @@ export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionCho
     },
     {
       id: 2,
+      stage: 1,
+      requiredLevel: 3,
+      requiredXp: 100,
       speciesId: SPECIES_IDS.WISP,
       name: "Chrono Phantom",
       title: "The Slot Weaver",
@@ -123,6 +133,9 @@ export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionCho
   [SPECIES_IDS.BYTEBEAST]: [
     {
       id: 1,
+      stage: 1,
+      requiredLevel: 3,
+      requiredXp: 100,
       speciesId: SPECIES_IDS.BYTEBEAST,
       name: "Cyber Warden",
       title: "The Iron Sentinel",
@@ -131,6 +144,9 @@ export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionCho
     },
     {
       id: 2,
+      stage: 1,
+      requiredLevel: 3,
+      requiredXp: 100,
       speciesId: SPECIES_IDS.BYTEBEAST,
       name: "Spark Overdrive",
       title: "The Lightning Artificer",
@@ -141,6 +157,9 @@ export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionCho
   [SPECIES_IDS.MOSSLING]: [
     {
       id: 1,
+      stage: 1,
+      requiredLevel: 3,
+      requiredXp: 100,
       speciesId: SPECIES_IDS.MOSSLING,
       name: "Elder Arbor",
       title: "The Heartwood Titan",
@@ -149,6 +168,9 @@ export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionCho
     },
     {
       id: 2,
+      stage: 1,
+      requiredLevel: 3,
+      requiredXp: 100,
       speciesId: SPECIES_IDS.MOSSLING,
       name: "Bloom Weaver",
       title: "The Spore Alchemist",
@@ -157,6 +179,39 @@ export const EVOLUTION_CATALOG: Record<SpeciesId, [EvolutionChoice, EvolutionCho
     },
   ],
 };
+
+// Multi-tier Evolution Stages for Levels 3, 7, 15
+export interface EvolutionTierInfo {
+  stage: number;
+  requiredLevel: number;
+  requiredXp: number;
+  label: string;
+  description: string;
+}
+
+export const EVOLUTION_TIERS: EvolutionTierInfo[] = [
+  {
+    stage: 1,
+    requiredLevel: 3,
+    requiredXp: 100,
+    label: "Stage I: Awakening Specialization",
+    description: "Initial specialization unlocking dedicated branch paths on-chain.",
+  },
+  {
+    stage: 2,
+    requiredLevel: 7,
+    requiredXp: 800,
+    label: "Stage II: Harmonic Resonance",
+    description: "Advanced harmony channeling deeper validator attunement.",
+  },
+  {
+    stage: 3,
+    requiredLevel: 15,
+    requiredXp: 3200,
+    label: "Stage III: Transcendent Apex",
+    description: "The ultimate form embodying permanent Solana consensus mastery.",
+  },
+];
 
 export const EVOLUTION_REQUIRED_LEVEL = 3;
 export const EVOLUTION_REQUIRED_XP = 100;
@@ -197,6 +252,17 @@ export const CreatureStateSchema = z.object({
 });
 
 export function calculateLevel(xp: number): number {
+  if (xp >= 3200) return 15;
+  if (xp >= 2600) return 14;
+  if (xp >= 2100) return 13;
+  if (xp >= 1700) return 12;
+  if (xp >= 1400) return 11;
+  if (xp >= 1150) return 10;
+  if (xp >= 950) return 9;
+  if (xp >= 800) return 8;
+  if (xp >= 650) return 7;
+  if (xp >= 500) return 6;
+  if (xp >= 350) return 5;
   if (xp >= 200) return 4;
   if (xp >= 100) return 3;
   if (xp >= 40) return 2;

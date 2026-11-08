@@ -9,7 +9,7 @@ export const NetworkBanner: FC = () => {
   const { connected } = useWallet();
 
   return (
-    <div className="w-full bg-slate-900/90 border-b border-cyan-900/40 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm">
+    <div className="w-full bg-slate-900/90 border-b border-cyan-900/40 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm print:hidden">
       <div className="flex items-center gap-2">
         <span className="flex h-2 w-2 relative">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

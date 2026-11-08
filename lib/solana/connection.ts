@@ -18,3 +18,7 @@ export function getExplorerUrl(signature: string, cluster: string = "devnet"): s
 export function getAddressExplorerUrl(address: string, cluster: string = "devnet"): string {
   return `https://explorer.solana.com/address/${address}?cluster=${cluster}`;
 }
+
+export function _resetSolanaConnection(): void {
+  cachedConnection = null;
+}

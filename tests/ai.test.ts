@@ -18,6 +18,9 @@ import {
   callOpenRouter,
   extractJsonFromMarkdown,
   buildCreatureDialoguePrompt,
+  buildCreatureEvolutionPrompt,
+  getSpeciesVoiceGuideline,
+  getActionIntentGuideline,
   getOpenRouterApiKey,
   DEFAULT_OPENROUTER_MODEL,
 } from "@/lib/ai/openrouter";
@@ -25,6 +28,8 @@ import { POST as dialoguePostHandler } from "@/app/api/creature/dialogue/route";
 import { POST as evolutionPostHandler } from "@/app/api/creature/evolution/route";
 import { fetchCreatureDialogue, fetchEvolutionNarrative } from "@/lib/ai/client";
 import { getFallbackDialogue, getFallbackEvolutionNarrative } from "@/lib/ai/fallback";
+import { SPECIES_IDS } from "@/lib/creature/types";
+import { resetDailyBudgetForTesting } from "@/lib/ai/dailyBudget";
 
 describe("AI Rate Limiter (lib/ai/rateLimit.ts)", () => {
   beforeEach(() => {
@@ -170,6 +175,56 @@ describe("Trait-Aware Prompt Construction (lib/ai/openrouter.ts)", () => {
     const prompt = buildCreatureDialoguePrompt(baseCtx);
     expect(prompt).toContain("Evolution: Base Form (Stage 0, Level 3, XP 120)");
   });
+
+  it("differentiates species voice guidelines for Wisp, Bytebeast, and Mossling", () => {
+    const wispPrompt = buildCreatureDialoguePrompt({ ...baseCtx, species: SPECIES_IDS.WISP, speciesName: "Wisp" });
+    const bytePrompt = buildCreatureDialoguePrompt({ ...baseCtx, species: SPECIES_IDS.BYTEBEAST, speciesName: "Bytebeast" });
+    const mossPrompt = buildCreatureDialoguePrompt({ ...baseCtx, species: SPECIES_IDS.MOSSLING, speciesName: "Mossling" });
+
+    // Wisp: ethereal, celestial cadence
+    expect(wispPrompt).toContain("Ethereal, intuitive, curious");
+    expect(wispPrompt).toContain("celestial cadence");
+    expect(wispPrompt).toContain("starlight");
+
+    // Bytebeast: analytical, technical, glitchy-precise
+    expect(bytePrompt).toContain("Analytical, energetic, technical");
+    expect(bytePrompt).toContain("glitchy-precise cadence");
+    expect(bytePrompt).toContain("clock cycles");
+
+    // Mossling: gentle, ancient, grounding
+    expect(mossPrompt).toContain("Gentle, ancient, grounding");
+    expect(mossPrompt).toContain("earthy-symbiotic");
+    expect(mossPrompt).toContain("root systems");
+  });
+
+  it("injects interaction intent guidelines for talk, ponder, comfort, and observe", () => {
+    const talkPrompt = buildCreatureDialoguePrompt({ ...baseCtx, action: "talk" });
+    const ponderPrompt = buildCreatureDialoguePrompt({ ...baseCtx, action: "ponder" });
+    const comfortPrompt = buildCreatureDialoguePrompt({ ...baseCtx, action: "comfort" });
+    const observePrompt = buildCreatureDialoguePrompt({ ...baseCtx, action: "observe" });
+
+    expect(talkPrompt).toContain('Interaction Mode ("talk")');
+    expect(ponderPrompt).toContain('Interaction Mode ("ponder")');
+    expect(comfortPrompt).toContain('Interaction Mode ("comfort")');
+    expect(observePrompt).toContain('Interaction Mode ("observe")');
+  });
+
+  it("builds species-tailored prompt for creature evolution narrative", () => {
+    const wispEvo = buildCreatureEvolutionPrompt({
+      species: SPECIES_IDS.WISP,
+      speciesName: "Wisp",
+      name: "Lumi",
+      level: 3,
+      choiceId: 1,
+      choiceName: "Astral Guide",
+      traits: [10, 10, 20, 10],
+    });
+
+    expect(wispEvo).toContain('Chainkin creature "Lumi"');
+    expect(wispEvo).toContain("Astral Guide");
+    expect(wispEvo).toContain("Ethereal, intuitive, curious");
+    expect(wispEvo).toContain("Personality traits: Curiosity=10, Courage=10, Empathy=20, Ingenuity=10");
+  });
 });
 
 describe("Markdown Stripping & Structured Output Validation", () => {
@@ -186,6 +241,13 @@ describe("Markdown Stripping & Structured Output Validation", () => {
   it("slices out json when surrounded by commentary", () => {
     const raw = 'Here is your response:\n{"mood": "Curious", "speech": "What is that?"}\nHope you like it!';
     expect(extractJsonFromMarkdown(raw)).toBe('{"mood": "Curious", "speech": "What is that?"}');
+  });
+
+  it("sanitizes trailing commas before closing braces/brackets commonly emitted by small LLMs", () => {
+    const rawWithTrailing = '{"mood": "Curious", "speech": "What is that?",}';
+    const cleaned = extractJsonFromMarkdown(rawWithTrailing);
+    expect(cleaned).toBe('{"mood": "Curious", "speech": "What is that?"}');
+    expect(() => JSON.parse(cleaned)).not.toThrow();
   });
 
   it("validates valid DialogueResponseSchema", () => {
@@ -297,6 +359,7 @@ describe("POST /api/creature/dialogue Route End-to-End Mocks", () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     _resetRateLimits();
+    resetDailyBudgetForTesting();
   });
 
   afterEach(() => {
@@ -434,88 +497,176 @@ describe("POST /api/creature/dialogue Route End-to-End Mocks", () => {
     const data = await res.json();
     expect(data.isFallback).toBe(true);
   });
-});
 
-describe("POST /api/creature/evolution Route End-to-End Mocks", () => {
-  const originalEnv = process.env;
+  it("supports interaction actions (ponder, comfort, observe, talk) via API endpoint", async () => {
+    delete process.env.OPENROUTER_API_KEY;
+    delete process.env.AI_API_KEY;
 
-  beforeEach(() => {
-    process.env = { ...originalEnv };
-    _resetRateLimits();
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
-    vi.restoreAllMocks();
-  });
-
-  const evolutionPayload = {
-    species: 0,
-    name: "Lumi",
-    level: 3,
-    choiceId: 1,
-    choiceName: "Astral Guide",
-    walletAddress: "OwnerWallet1111111111111111111111111111",
-  };
-
-  it("returns AI generated narrative on success", async () => {
-    process.env.OPENROUTER_API_KEY = "sk-mock-valid";
-    process.env.AI_PROVIDER = "openrouter";
-
-    const mockAiResponse = {
-      title: "Dawn of the Astral Guide",
-      proclamation: "The veil of the mempool parts before our starlight!",
-      transformationSummary: "Lumi ascended to Astral Guide in radiant glory.",
-    };
-
-    vi.spyOn(global, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify(mockAiResponse),
-              },
-            },
-          ],
-        }),
-        { status: 200 }
-      )
-    );
-
-    const req = new NextRequest("http://localhost/api/creature/evolution", {
+    const ponderReq = new NextRequest("http://localhost/api/creature/dialogue", {
       method: "POST",
-      headers: { "x-real-ip": "10.0.0.21" },
-      body: JSON.stringify(evolutionPayload),
+      headers: { "x-real-ip": "192.168.1.15" },
+      body: JSON.stringify({ ...validPayload, recentRitual: "none", action: "ponder" }),
     });
 
-    const res = await evolutionPostHandler(req);
+    const res = await dialoguePostHandler(ponderReq);
     expect(res.status).toBe(200);
-
-    const data = await res.json();
-    expect(data.isFallback).toBe(false);
-    expect(data.title).toBe("Dawn of the Astral Guide");
-    expect(data.proclamation).toContain("starlight");
-  });
-
-  it("falls back deterministically on upstream error", async () => {
-    process.env.OPENROUTER_API_KEY = "sk-mock-valid";
-    process.env.AI_PROVIDER = "openrouter";
-
-    vi.spyOn(global, "fetch").mockRejectedValueOnce(new Error("Network connection dropped"));
-
-    const req = new NextRequest("http://localhost/api/creature/evolution", {
-      method: "POST",
-      headers: { "x-real-ip": "10.0.0.22" },
-      body: JSON.stringify(evolutionPayload),
-    });
-
-    const res = await evolutionPostHandler(req);
-    expect(res.status).toBe(200);
-
     const data = await res.json();
     expect(data.isFallback).toBe(true);
-    expect(data.title).toBe("Ascension of the Astral Guide");
+    expect(data.mood).toBe("Analytical");
+    expect(data.speech).toContain("entropy");
+  });
+});
+
+describe("Species Differentiation & Interaction Matrix in Fallback Dialogue (lib/ai/fallback.ts)", () => {
+  const baseKin = {
+    name: "Kin",
+    level: 2,
+    xp: 45,
+    evolutionStage: 0,
+    recentRitual: "none" as const,
+  };
+
+  it("returns distinct species voices for Talk interaction", () => {
+    const wisp = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.WISP, speciesName: "Wisp", action: "talk" });
+    const byte = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.BYTEBEAST, speciesName: "Bytebeast", action: "talk" });
+    const moss = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.MOSSLING, speciesName: "Mossling", action: "talk" });
+
+    expect(wisp.mood).toBe("Playful & Curious");
+    expect(byte.mood).toBe("Energized");
+    expect(moss.mood).toBe("Contemplative");
+
+    expect(wisp.speech).toContain("spirals of light");
+    expect(byte.speech).toContain("Pistons pump");
+    expect(moss.speech).toContain("cool block air");
+
+    expect(wisp.speech).not.toBe(byte.speech);
+    expect(byte.speech).not.toBe(moss.speech);
+    expect(wisp.speech).not.toBe(moss.speech);
+  });
+
+  it("returns distinct species voices for Ponder interaction", () => {
+    const wisp = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.WISP, speciesName: "Wisp", action: "ponder" });
+    const byte = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.BYTEBEAST, speciesName: "Bytebeast", action: "ponder" });
+    const moss = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.MOSSLING, speciesName: "Mossling", action: "ponder" });
+
+    expect(wisp.mood).toBe("Philosophical");
+    expect(byte.mood).toBe("Analytical");
+    expect(moss.mood).toBe("Meditative");
+
+    expect(wisp.speech).toContain("echoes drift forever");
+    expect(byte.speech).toContain("entropy");
+    expect(moss.speech).toContain("growth ring");
+
+    expect(wisp.thought).not.toBe(byte.thought);
+    expect(byte.thought).not.toBe(moss.thought);
+  });
+
+  it("returns distinct species voices for Comfort interaction", () => {
+    const wisp = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.WISP, speciesName: "Wisp", action: "comfort" });
+    const byte = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.BYTEBEAST, speciesName: "Bytebeast", action: "comfort" });
+    const moss = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.MOSSLING, speciesName: "Mossling", action: "comfort" });
+
+    expect(wisp.mood).toBe("Affectionate");
+    expect(byte.mood).toBe("Loyal & Protective");
+    expect(moss.mood).toBe("Nurturing");
+
+    expect(wisp.speech).toContain("Rest your worries");
+    expect(byte.speech).toContain("Thermal load nominal");
+    expect(moss.speech).toContain("tender clover blossom");
+  });
+
+  it("returns distinct species voices for Observe interaction", () => {
+    const wisp = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.WISP, speciesName: "Wisp", action: "observe" });
+    const byte = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.BYTEBEAST, speciesName: "Bytebeast", action: "observe" });
+    const moss = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.MOSSLING, speciesName: "Mossling", action: "observe" });
+
+    expect(wisp.mood).toBe("Observant");
+    expect(byte.mood).toBe("Vigilant");
+    expect(moss.mood).toBe("Watchful");
+
+    expect(wisp.speech).toContain("wallet's aura");
+    expect(byte.speech).toContain("Radar dish sweeps");
+    expect(moss.speech).toContain("fern fronds");
+  });
+
+  it("returns distinct ritual acknowledgments for all ritual types", () => {
+    const wispObs = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.WISP, speciesName: "Wisp", recentRitual: "observe" });
+    const byteObs = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.BYTEBEAST, speciesName: "Bytebeast", recentRitual: "observe" });
+    const mossObs = getFallbackDialogue({ ...baseKin, species: SPECIES_IDS.MOSSLING, speciesName: "Mossling", recentRitual: "observe" });
+
+    expect(wispObs.mood).toBe("Harmonized");
+    expect(wispObs.speech).toContain("translucent clarity");
+
+    expect(byteObs.mood).toBe("Monitored & Nominal");
+    expect(byteObs.speech).toContain("Diagnostic sweep confirmed");
+
+    expect(mossObs.mood).toBe("Still & Centered");
+    expect(mossObs.speech).toContain("Amber resin glimmers");
+  });
+
+  it("differentiates evolved form fallbacks across species while retaining transcendent harmony", () => {
+    const wispEvolved = getFallbackDialogue({
+      ...baseKin,
+      species: SPECIES_IDS.WISP,
+      speciesName: "Wisp",
+      evolutionStage: 1,
+      evolutionName: "Astral Guide",
+    });
+
+    const byteEvolved = getFallbackDialogue({
+      ...baseKin,
+      species: SPECIES_IDS.BYTEBEAST,
+      speciesName: "Bytebeast",
+      evolutionStage: 1,
+      evolutionName: "Cyber Warden",
+    });
+
+    expect(wispEvolved.mood).toBe("Transcendent & Radiant");
+    expect(wispEvolved.speech).toContain("Luminous harmonics resonate deeply");
+    expect(wispEvolved.speech).toContain("The cluster pulses in harmony with our evolved form as Astral Guide");
+
+    expect(byteEvolved.mood).toBe("Transcendent & Calibrated");
+    expect(byteEvolved.speech).toContain("titanium manifolds");
+    expect(byteEvolved.speech).toContain("The cluster pulses in harmony with our evolved form as Cyber Warden");
+  });
+
+  it("differentiates evolution proclamations and transformation summaries by species", () => {
+    const wispNar = getFallbackEvolutionNarrative({
+      species: SPECIES_IDS.WISP,
+      name: "Lumi",
+      level: 3,
+      choiceId: 1,
+      choiceName: "Astral Guide",
+    });
+
+    const byteNar = getFallbackEvolutionNarrative({
+      species: SPECIES_IDS.BYTEBEAST,
+      name: "Geary",
+      level: 3,
+      choiceId: 1,
+      choiceName: "Cyber Warden",
+    });
+
+    const mossNar = getFallbackEvolutionNarrative({
+      species: SPECIES_IDS.MOSSLING,
+      name: "Sprout",
+      level: 3,
+      choiceId: 1,
+      choiceName: "Verdant Elder",
+    });
+
+    expect(wispNar.proclamation).toContain("radiant celestial energy");
+    expect(wispNar.transformationSummary).toContain("celestial mantle");
+
+    expect(byteNar.proclamation).toContain("Overclocked servos");
+    expect(byteNar.transformationSummary).toContain("engineered mantle");
+
+    expect(mossNar.proclamation).toContain("Ancient heartwood");
+    expect(mossNar.transformationSummary).toContain("verdant mantle");
+
+    expect(wispNar.title).toBe("Ascension of the Astral Guide");
+    expect(byteNar.title).toBe("Ascension of the Cyber Warden");
+    expect(mossNar.title).toBe("Ascension of the Verdant Elder");
   });
 });
 

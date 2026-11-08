@@ -70,10 +70,46 @@ function pruneStaleRateLimits(now: number, windowMs: number): void {
   });
 }
 
+export const MAX_PAYLOAD_BYTES = 16 * 1024; // 16 KB payload limit for AI endpoints
+
+/**
+ * Validates that an incoming payload does not exceed acceptable payload limits.
+ */
+export function validatePayloadSize(
+  contentLengthHeader: string | null,
+  rawBodyLength?: number
+): boolean {
+  if (contentLengthHeader) {
+    const parsed = parseInt(contentLengthHeader, 10);
+    if (!isNaN(parsed) && parsed > MAX_PAYLOAD_BYTES) {
+      return false;
+    }
+  }
+  if (rawBodyLength !== undefined && rawBodyLength > MAX_PAYLOAD_BYTES) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates that a string is a well-formed Solana base58 public key (32-44 base58 chars).
+ */
+export function isValidSolanaAddress(address?: string): boolean {
+  if (!address || typeof address !== "string") {
+    return false;
+  }
+  const trimmed = address.trim();
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed);
+}
+
 /**
  * Extract client IP from standard request headers.
  */
 export function getClientIp(req: Request): string {
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp && cfIp.trim()) {
+    return cfIp.trim();
+  }
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     const parts = forwarded.split(",");
@@ -104,7 +140,8 @@ export function checkRequestRateLimit(
   }
 
   if (walletAddress && walletAddress.trim()) {
-    const walletResult = checkRateLimit(`wallet:${walletAddress.trim()}`, limitPerMinute);
+    const sanitizedWallet = walletAddress.trim().slice(0, 44);
+    const walletResult = checkRateLimit(`wallet:${sanitizedWallet}`, limitPerMinute);
     if (!walletResult.success) {
       return walletResult;
     }
